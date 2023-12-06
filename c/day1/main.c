@@ -6,9 +6,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-size_t getCalibraionValue(char*, size_t);
-void replaceWordNumbers(char*, size_t);
-size_t sum(size_t*, size_t);
+char numMap[10][6] = {
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine"
+};
+
+size_t getCalibrationValue(char *, size_t);
+size_t getCalibrationValue(char *, size_t);
+size_t searchNumericValue(char *, size_t, size_t *);
+size_t sum(size_t *, size_t);
 
 size_t getCalibrationValue(char* string, size_t n) {
 
@@ -41,6 +55,50 @@ size_t getCalibrationValue(char* string, size_t n) {
 
 }
 
+size_t getCalibrationValue1(char *string, size_t n) {
+
+    char calibrationString[3];
+    size_t results[10];
+    size_t numResults;
+
+    size_t maxVal = 0;
+    size_t minVal = 10;
+    size_t maxI = 0;
+    size_t minI = 999;
+    size_t resultCounter = 0;
+
+    for (size_t i = 1; i <= 9; i++) {
+        numResults = searchNumericValue(string, i, results);
+        
+        for (size_t j = 0; j < numResults; j++) {
+            /* printf("%zu:%zu", results[j], i); */
+            resultCounter++;
+            if (results[j] > maxI) {
+                maxVal = i;
+                maxI = results[j];
+            }
+            if (results[j] < minI) {
+                minVal = i;
+                minI = results[j];
+            }
+        }
+        /* printf("\n"); */
+    }
+
+    if (resultCounter == 0) {
+        return 0;
+    }
+    calibrationString[0] = minVal + '0';
+    calibrationString[1] = '\0';
+    if (resultCounter > 1) {
+        calibrationString[1] = maxVal + '0';
+        calibrationString[2] = '\0';
+    }
+    printf("%s\n", calibrationString);
+    return atoi(calibrationString);
+
+}
+
 size_t sum(size_t *values, size_t n) {
 
     // values:  Array of values to add
@@ -53,7 +111,7 @@ size_t sum(size_t *values, size_t n) {
     size_t i = 0;
    
     while (i < n) {
-        printf("%zu\n", values[i]);
+        /* printf("%zu\n", values[i]); */
         sum += values[i++];
     }
 
@@ -61,15 +119,7 @@ size_t sum(size_t *values, size_t n) {
 
 }
 
-/* void replaceWordNumbers(char *string, size_t n) { */
-/*  */
-/*     // Replace written words (one, two, three, etc.) with the */
-/*     // number value (1, 2, 3, etc.) */
-/*      */
-/*     enum numbers {} */
-/* } */
-
-char *searchNumericValue(char *string, char *findString) {
+size_t searchNumericValue(char *string, size_t findNumber, size_t *indexes) {
 
     // Searches for string of numbers (one, two, etc) or
     // (1, 2, etc)
@@ -78,48 +128,52 @@ char *searchNumericValue(char *string, char *findString) {
     // values overlap (twone), and the end result won't be
     // different weather or not the original string is still
     // present
-    
-
+    char findString[6];
+    size_t numIndexes[10];
     char sc;                        // string char
     char fc;                        // find char
     size_t sp;                      // string pointer
     size_t fp;                      // from pointer
-    size_t cp = 0;                  // charBuf pointer
-    size_t np = 0;                  // newString pointer
+    size_t np = 0;                  // numIndexes pointer
     u_short ff;                     // found flag
 
+    strcpy(findString, numMap[findNumber]);
+
+    // Search for string indexes
     for (sp = 0; (sc = string[sp]) != '\0'; sp++) {
         ff = 1;
         for (fp = 0; (fc = findString[fp]) != '\0'; fp++) {
             if (sc == fc) {
-                sc = string[sp++];
-                continue;
+                sc = string[++sp];
             }
             else {
-                charBuf[cp++] = sc;
-                for (size_t i = 0; i < cp;) {
-                    newString[np++] = charBuf[i++];
-                }
                 ff = 0;
                 break;
             }
         }
         if (ff) {
-            newString[np++] = add;
-            for (size_t i = 0; i < cp;) {
-                newString[np++] = charBuf[i++];
-            }
+            numIndexes[np++] = sp;
         }
-        cp = 0;
     }
 
-    newString[np] = '\0';
-    return newString;
+    for (sp = 0; (sc = string[sp]) != '\0'; sp++) {
+        if (sc == findNumber + '0') {
+            numIndexes[np++] = sp + 1;
+        }
+    }
+
+    for (size_t i = 0; i < np; i++) {
+        indexes[i] = numIndexes[i];
+    }
+
+    return np;
 
 }
+
 int main(void) {
 
     size_t answer1Values[1000];
+    size_t answer2Values[1000];
     size_t answer1;
     size_t answer2;
 
@@ -133,16 +187,17 @@ int main(void) {
     lc = 0;
 
     while ((chars = getline(&lineBuf, &bufSize, f) > 0)) {
-        answer1Values[lc++] = getCalibrationValue(lineBuf, strlen(lineBuf));
+        /* answer1Values[lc] = getCalibrationValue(lineBuf, strlen(lineBuf)); */
+        printf("%s", lineBuf);
+        answer2Values[lc++] = getCalibrationValue1(lineBuf, strlen(lineBuf));
     }
 
-    answer1 = sum(answer1Values, lc);
+    /* answer1 = sum(answer1Values, lc); */
+    answer2 = sum(answer2Values, lc);
 
-    printf("%zu\n", answer1);
-
-    char string1[25] = "jjd74twonepvj";
-    char stringFrom[10] = "two";
-    printf("%s\n", addNumericValue(string1, stringFrom, '2'));
+    /* printf("%zu\n", answer1); */
+    printf("%zu\n", answer2);
 
     return EXIT_SUCCESS;
+
 }
