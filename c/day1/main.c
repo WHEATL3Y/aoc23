@@ -64,14 +64,13 @@ size_t getCalibrationValue1(char *string, size_t n) {
     size_t maxVal = 0;
     size_t minVal = 10;
     size_t maxI = 0;
-    size_t minI = 999;
+    size_t minI = 9999;
     size_t resultCounter = 0;
 
     for (size_t i = 1; i <= 9; i++) {
         numResults = searchNumericValue(string, i, results);
         
         for (size_t j = 0; j < numResults; j++) {
-            /* printf("%zu:%zu", results[j], i); */
             resultCounter++;
             if (results[j] > maxI) {
                 maxVal = i;
@@ -88,13 +87,13 @@ size_t getCalibrationValue1(char *string, size_t n) {
     if (resultCounter == 0) {
         return 0;
     }
+
     calibrationString[0] = minVal + '0';
-    calibrationString[1] = '\0';
-    if (resultCounter > 1) {
-        calibrationString[1] = maxVal + '0';
-        calibrationString[2] = '\0';
-    }
-    printf("%s\n", calibrationString);
+    calibrationString[1] = maxVal + '0';
+    calibrationString[2] = '\0';
+
+    /* printf("%s, %s", calibrationString, string); */
+
     return atoi(calibrationString);
 
 }
@@ -111,7 +110,6 @@ size_t sum(size_t *values, size_t n) {
     size_t i = 0;
    
     while (i < n) {
-        /* printf("%zu\n", values[i]); */
         sum += values[i++];
     }
 
@@ -121,13 +119,15 @@ size_t sum(size_t *values, size_t n) {
 
 size_t searchNumericValue(char *string, size_t findNumber, size_t *indexes) {
 
-    // Searches for string of numbers (one, two, etc) or
-    // (1, 2, etc)
-    // 
-    // The reason to insert instead of replace is that some
-    // values overlap (twone), and the end result won't be
-    // different weather or not the original string is still
-    // present
+    // Searches a string for string (one, two, three), or decima (1, 2, 3)
+    // values in a string
+    //
+    // string: String to search
+    // findNumber: number to search for
+    // indexes: Array to store index of matches
+    //
+    // Returns: Number of results in indexes
+
     char findString[6];
     size_t numIndexes[10];
     char sc;                        // string char
@@ -136,17 +136,26 @@ size_t searchNumericValue(char *string, size_t findNumber, size_t *indexes) {
     size_t fp;                      // from pointer
     size_t np = 0;                  // numIndexes pointer
     u_short ff;                     // found flag
+    u_short f1;                     // matched 1 char flag
 
     strcpy(findString, numMap[findNumber]);
 
     // Search for string indexes
     for (sp = 0; (sc = string[sp]) != '\0'; sp++) {
         ff = 1;
+        f1 = 0;
         for (fp = 0; (fc = findString[fp]) != '\0'; fp++) {
             if (sc == fc) {
                 sc = string[++sp];
+                f1 = 1;
             }
             else {
+                // Strings can get out of sync if one char is matched,
+                // but not the whole string, this compensates for that
+                if (f1) {
+                    sp--;
+                }
+                f1 = 0;
                 ff = 0;
                 break;
             }
@@ -180,22 +189,27 @@ int main(void) {
     FILE *f = fopen("../../inputs/day1/input.txt", "r");
     char *lineBuf;
     size_t lc;      // Line Index
+    size_t ll;      // Line Length
     size_t bufSize = 100;
     size_t chars;
 
     lineBuf = (char *)malloc(bufSize * sizeof(char));
+
     lc = 0;
 
     while ((chars = getline(&lineBuf, &bufSize, f) > 0)) {
-        /* answer1Values[lc] = getCalibrationValue(lineBuf, strlen(lineBuf)); */
-        printf("%s", lineBuf);
-        answer2Values[lc++] = getCalibrationValue1(lineBuf, strlen(lineBuf));
+       
+        ll = strlen(lineBuf);
+        answer1Values[lc] = getCalibrationValue(lineBuf, ll);
+        answer2Values[lc] = getCalibrationValue1(lineBuf, ll);
+        
+        lc++;
     }
 
-    /* answer1 = sum(answer1Values, lc); */
+    answer1 = sum(answer1Values, lc);
     answer2 = sum(answer2Values, lc);
 
-    /* printf("%zu\n", answer1); */
+    printf("%zu\n", answer1);
     printf("%zu\n", answer2);
 
     return EXIT_SUCCESS;
