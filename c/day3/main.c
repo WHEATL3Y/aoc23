@@ -5,6 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+size_t static xMax;
+size_t static yMax;
+
+size_t answer1 = 0;
+size_t answer2 = 0;
+
 typedef struct {
     size_t x;
     size_t y;
@@ -13,6 +19,8 @@ typedef struct {
 void getMapSize(size_t *, size_t *, FILE *);
 int getNextNumInLine(char *, size_t, size_t, size_t *);
 size_t digitLength(size_t);
+size_t scanPoint(point, char **);
+size_t isSymbol(char);
 
 void getMapSize(size_t *x, size_t *y, FILE *map) {
 
@@ -66,27 +74,32 @@ int getNextNumInLine(char *line, size_t current, size_t length, size_t *num) {
     char c;                 // Single char for comparisions
     char numStr[4];         // Storage for found num values
     size_t nsp = 0;         // numStr pointer
+    u_short ff = 0;         // Found Flag
 
-    // Skip non-numbers
-    while ((c = line[i++]) < '0' || c > '9' && i < length) {
-        ;
-    }
+    for (i = current; i < length; i++) {
+        // Skip non-numbers
+        c = line[i];
+        if (c < '0' || c > '9') {
+            if (ff) {
+                break;
+            }
+            continue;
+        }
 
-    if (c >= '0' && c <= '9') {
-        numStr[nsp++] = c;
-        while ((c = line[i++]) >= '0' && c <= '9') {
+        if (c >= '0' && c <= '9') {
+            ff = 1;
             numStr[nsp++] = c;
         }
+    }
+
+    if (ff) {
         numStr[nsp] = '\0';
+        *num = atoi(numStr);
+        return i + 1;
     }
     else {
         return -1;
     }
-
-    *num = atoi(numStr);
-
-    return i;
-
 }
 
 size_t digitLength(size_t num) {
@@ -114,31 +127,70 @@ size_t digitLength(size_t num) {
 
 }
 
+size_t scanPoint(point p, char **map) {
+
+    // Looks at every values surrounding p in map
+    // to determine if it's adjacent to a symbol
+    //
+    // Params:
+    //  char *map: map of characters to search
+    //  point p: x, y coords to scan around in map
+    //
+    // Returns:
+    //  0 - p is not adjacent to a symbol
+    //  1 - p is adjacent to a symbol
+   
+    return (
+            (p.x != 0 && isSymbol(map[p.y][p.x - 1]))
+         || (p.x != xMax - 1 && isSymbol(map[p.y][p.x + 1]))
+         || (p.y != 0 && isSymbol(map[p.y - 1][p.x]))
+         || (p.y != yMax - 1 && isSymbol(map[p.y + 1][p.x]))
+         || (p.y != 0 && p.x != 0 && isSymbol(map[p.y - 1][p.x - 1]))
+         || (p.y != 0 && p.x != xMax - 1 && isSymbol(map[p.y - 1][p.x + 1]))
+         || (p.y != yMax - 1 && p.x != 0 && isSymbol(map[p.y + 1][p.x - 1]))
+         || (p.y != yMax - 1 && p.x != xMax - 1 && isSymbol(map[p.y + 1][p.x + 1]))
+       );
+}
+
+size_t isSymbol(char c) {
+    
+    // Checks whether c is a symobol (not 0-9 or .)
+    // 
+    // Params:
+    //  char c: Character to check
+    //
+    // Returns:
+    //  1 if c is not 0-9 or .
+    //  0 if c is 0-9 or .
+    
+    return ((c < '0') || (c > '9')) && c != '.';
+
+}
+
 int main(void) {
 
-    FILE *f = fopen("../../inputs/day3/sample.txt", "r");
-    size_t x;           // Width of map
+    FILE *f = fopen("../../inputs/day3/input.txt", "r");
     size_t xi;          // x index for map array
-    size_t y;           // Height of map (should match width);
     size_t yi;          // y index for map array
     char **map;         // Array to represent map
     char* lineBuf;      // Buffer for map lines
     size_t lSize;       // Length of lineBuf (x + 1)
     size_t chars;       // Return value of getline
     size_t nextNum;     // To store num values from map
-    point currentPoint; // Current point being worked
+    point currentStart; // First digit of current number
+    point currentEnd;   // Last digit of current number
 
-    getMapSize(&x, &y, f);
+    getMapSize(&xMax, &yMax, f);
 
     // Allocate rows
-    map = (char**)malloc(y * sizeof(char*));
+    map = (char**)malloc(yMax * sizeof(char*));
     // Allocate cells in each row
-    for (int i = 0; i < x; i++) {
-        map[i] = (char*)malloc(x * sizeof(char*));
+    for (int i = 0; i < xMax; i++) {
+        map[i] = (char*)malloc(xMax * sizeof(char*));
     }
 
     // Setup for getline
-    lSize = x + 1;    
+    lSize = xMax + 1;    
     lineBuf = (char *)malloc(sizeof(char) * lSize);
 
     // Load map
@@ -154,19 +206,36 @@ int main(void) {
     free(lineBuf);
 
     yi = 0;
-    while (yi < y) {
+    while (yi < yMax) {
         xi = 0;
         
-        while ((xi = getNextNumInLine(map[yi], xi, x, &nextNum)) != -1) {
-            currentPoint.x = xi - 2;
-            currentPoint.y = yi;
+        while ((xi = getNextNumInLine(map[yi], xi, xMax, &nextNum)) != -1) {
+            currentEnd.x = xi - 2;
+            currentEnd.y = yi;
+            currentStart.x = currentEnd.x - (digitLength(nextNum) - 1);
+            currentStart.y = yi;
+          
+            if (scanPoint(currentStart, map) || scanPoint(currentEnd, map)) {
+                printf("%zu\n", nextNum);
+                printf("%zu, %zu\n", currentEnd.x, currentEnd.y);
+                answer1 += nextNum; 
+                continue;
+            }
 
-            printf("(%zu, %zu): %zu, %zu\n", currentPoint.x, currentPoint.y, nextNum, digitLength(nextNum)); 
+            /* printf("(%zu, %zu, %zu): %zu, %zu\n", */
+            /*         currentEnd.y, */
+            /*         currentStart.x, */
+            /*         currentEnd.x, */
+            /*         nextNum, */
+            /*         digitLength(nextNum) */
+            /* );  */
         }
 
         yi++;
 
     } 
+
+    printf("%zu\n", answer1);
 
     return EXIT_SUCCESS;
 }
