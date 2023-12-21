@@ -22,7 +22,7 @@ int getNextNumInLine(char *, size_t, size_t *);
 int getNextGearInLine(char *, size_t);
 int getWholeNumber(point, char **, point *, size_t *pp);
 size_t digitLength(size_t);
-size_t scanPoint(point, char **, size_t (*)(char));
+size_t scanPoint(point, char **, size_t, size_t (*)(char));
 size_t isSymbol(char);
 
 void getMapSize(size_t *x, size_t *y, FILE *map) {
@@ -153,30 +153,45 @@ size_t digitLength(size_t num) {
 
 }
 
-size_t scanPoint(point p, char **map, size_t (*matchFunc)(char)) {
+size_t scanPoint(point p, char **map, size_t start, size_t (*matchFunc)(char)) {
 
     // Looks at every value surrounding p in map
     // to to see if they meet the criteria of sFunc 
     //
     // Params:
-    //  char *map: map of characters to search
     //  point p: x, y coords to scan around in map
+    //  char *map: map of characters to search
+    //  size_t start: Position to start up/left = 0, left = 7
     //  int (*sFunc)(char): Search function
     //
     // Returns:
     //  0 - match adjecent to p
     //  1 - no match adjacent to p
-   
-    return (
-            (p.x != 0 && matchFunc(map[p.y][p.x - 1]))
-         || (p.x != xMax - 1 && matchFunc(map[p.y][p.x + 1]))
-         || (p.y != 0 && matchFunc(map[p.y - 1][p.x]))
-         || (p.y != yMax - 1 && matchFunc(map[p.y + 1][p.x]))
-         || (p.y != 0 && p.x != 0 && matchFunc(map[p.y - 1][p.x - 1]))
-         || (p.y != 0 && p.x != xMax - 1 && matchFunc(map[p.y - 1][p.x + 1]))
-         || (p.y != yMax - 1 && p.x != 0 && matchFunc(map[p.y + 1][p.x - 1]))
-         || (p.y != yMax - 1 && p.x != xMax - 1 && matchFunc(map[p.y + 1][p.x + 1]))
-       );
+
+    start = 10;
+
+
+    if (p.y != 0 && p.x != 0 && matchFunc(map[p.y - 1][p.x - 1]) && start > 4) {return 1;}
+    if (p.y != 0 && matchFunc(map[p.y - 1][p.x]) && start > 2) {return 1;}
+    if (p.x != 0 && matchFunc(map[p.y][p.x - 1]) && start > 0) {return 1;}
+    if (p.y != 0 && p.x != xMax - 1 && matchFunc(map[p.y - 1][p.x + 1]) && start > 5) {return 1;}
+    if (p.x != xMax - 1 && matchFunc(map[p.y][p.x + 1]) && start > 1) {return 1;}
+    if (p.y != yMax - 1 && p.x != xMax - 1 && matchFunc(map[p.y + 1][p.x + 1]) > 7) {return 1;}
+    if (p.y != yMax - 1 && matchFunc(map[p.y + 1][p.x]) && start > 3) {return 1;}
+    if (p.y != yMax - 1 && p.x != 0 && matchFunc(map[p.y + 1][p.x - 1]) && start > 6) {return 1;}
+
+    return 0;
+
+    /* return ( */
+    /*         (p.x != 0 && matchFunc(map[p.y][p.x - 1])) */
+    /*      || (p.x != xMax - 1 && matchFunc(map[p.y][p.x + 1])) */
+    /*      || (p.y != 0 && matchFunc(map[p.y - 1][p.x])) */
+    /*      || (p.y != yMax - 1 && matchFunc(map[p.y + 1][p.x])) */
+    /*      || (p.y != 0 && p.x != 0 && matchFunc(map[p.y - 1][p.x - 1])) */
+    /*      || (p.y != 0 && p.x != xMax - 1 && matchFunc(map[p.y - 1][p.x + 1])) */
+    /*      || (p.y != yMax - 1 && p.x != 0 && matchFunc(map[p.y + 1][p.x - 1])) */
+    /*      || (p.y != yMax - 1 && p.x != xMax - 1 && matchFunc(map[p.y + 1][p.x + 1])) */
+    /*    ); */
 }
 
 size_t isSymbol(char c) {
@@ -330,7 +345,7 @@ int main(void) {
             currentStart.x = currentEnd.x - (digitLength(nextNum) - 1);
             currentStart.y = yi;
           
-            if (scanPoint(currentStart, map, &isSymbol) || scanPoint(currentEnd, map, &isSymbol)) {
+            if (scanPoint(currentStart, map, 0,  &isSymbol) || scanPoint(currentEnd, map, 0, &isSymbol)) {
                 answer1 += nextNum; 
                 continue;
             }
@@ -349,7 +364,7 @@ int main(void) {
             currentEnd.x = xi;
             currentEnd.y = yi;
 
-            if (scanPoint(currentEnd, map, &isDigit)) {
+            if (scanPoint(currentEnd, map, 0, &isDigit)) {
                 printf("%zu, %zu\n", xi, yi);
             }
             xi++;
