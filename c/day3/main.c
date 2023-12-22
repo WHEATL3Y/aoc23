@@ -13,17 +13,17 @@ size_t answer1 = 0;
 size_t answer2 = 0;
 
 typedef struct {
-    size_t x;
-    size_t y;
+    int x;
+    int y;
 } point;
 
 void getMapSize(size_t *, size_t *, FILE *);
-int getNextNumInLine(char *, size_t, size_t *);
 int getNextGearInLine(char *, size_t);
-int getWholeNumber(point, char **, point *, size_t *pp);
+int getWholeNumber(point, char **);
 size_t digitLength(size_t);
-size_t scanPoint(point, char **, size_t, size_t (*)(char));
+point scanPoint(point, char **, size_t);
 size_t isSymbol(char);
+size_t isDigit(char);
 
 void getMapSize(size_t *x, size_t *y, FILE *map) {
 
@@ -59,55 +59,10 @@ void getMapSize(size_t *x, size_t *y, FILE *map) {
     fseek(map, 0, SEEK_SET);
 }
 
-int getNextNumInLine(char *line, size_t current, size_t *num) {
-    
-    // Scans through line starting at current, returns pos of
-    // next number
-    //
-    // Params:
-    //  char *line: Array of characters
-    //  size_t current: Position in line to start search
-    //  size_t *num: Value of number found
-    //
-    // Returns:
-    //  int: index of returned, -1 for no result
+int getNextSymbolInLine(char *line, size_t current) {
 
-    size_t i;               // line index for loop
-    char c;                 // Single char for comparisions
-    char numStr[4];         // Storage for found num values
-    size_t nsp = 0;         // numStr pointer
-    u_short ff = 0;         // Found Flag
-
-    for (i = current; i < xMax; i++) {
-        // Skip non-numbers
-        c = line[i];
-        if (c < '0' || c > '9') {
-            if (ff) {
-                break;
-            }
-            continue;
-        }
-
-        if (c >= '0' && c <= '9') {
-            ff = 1;
-            numStr[nsp++] = c;
-        }
-    }
-
-    if (ff) {
-        numStr[nsp] = '\0';
-        *num = atoi(numStr);
-        return i + 1;
-    }
-    else {
-        return -1;
-    }
-}
-
-int getNextGearInLine(char *line, size_t current) {
-
-    // Scans through line starting at current, returns pos of
-    // next number
+    // Scans through line starting at current,
+    // returns x index where symbol was found
     //
     // Params:
     //  char *line: Array of characters
@@ -119,7 +74,7 @@ int getNextGearInLine(char *line, size_t current) {
     int i;
 
     for (i = current; i < xMax; i++) {
-        if (line[i] == '*') {
+        if (isSymbol(line[i])) {
             return i;
         }
     }
@@ -128,32 +83,7 @@ int getNextGearInLine(char *line, size_t current) {
 
 }
 
-size_t digitLength(size_t num) {
-
-    // Returns the number of digits in num
-    //
-    // Params:
-    //  size_t num: Number to get length of
-    //
-    // Returns:
-    //  size_t: Number of digits in num
-   
-    if (num == 0) {
-        return 1;
-    }
-
-    size_t l = 1;   // Counter for length of num
-    size_t n = num;       // to mutate num
-
-    while ((n = (n / 10)) > 0) {
-        l++;
-    }
-
-    return l;
-
-}
-
-size_t scanPoint(point p, char **map, size_t start, size_t (*matchFunc)(char)) {
+point scanPoint(point p, char **map, size_t reverse) {
 
     // Looks at every value surrounding p in map
     // to to see if they meet the criteria of sFunc 
@@ -161,37 +91,63 @@ size_t scanPoint(point p, char **map, size_t start, size_t (*matchFunc)(char)) {
     // Params:
     //  point p: x, y coords to scan around in map
     //  char *map: map of characters to search
-    //  size_t start: Position to start up/left = 0, left = 7
+    //  size_t reverse: Flag, 0 = look clockwise, 1 = counter
     //  int (*sFunc)(char): Search function
     //
     // Returns:
-    //  0 - match adjecent to p
-    //  1 - no match adjacent to p
+    //  fm - Point at which a match was found
 
-    start = 10;
+    point fm;       // Found Match, store it here, this gets returned
+    int i;
 
 
-    if (p.y != 0 && p.x != 0 && matchFunc(map[p.y - 1][p.x - 1]) && start > 4) {return 1;}
-    if (p.y != 0 && matchFunc(map[p.y - 1][p.x]) && start > 2) {return 1;}
-    if (p.x != 0 && matchFunc(map[p.y][p.x - 1]) && start > 0) {return 1;}
-    if (p.y != 0 && p.x != xMax - 1 && matchFunc(map[p.y - 1][p.x + 1]) && start > 5) {return 1;}
-    if (p.x != xMax - 1 && matchFunc(map[p.y][p.x + 1]) && start > 1) {return 1;}
-    if (p.y != yMax - 1 && p.x != xMax - 1 && matchFunc(map[p.y + 1][p.x + 1]) > 7) {return 1;}
-    if (p.y != yMax - 1 && matchFunc(map[p.y + 1][p.x]) && start > 3) {return 1;}
-    if (p.y != yMax - 1 && p.x != 0 && matchFunc(map[p.y + 1][p.x - 1]) && start > 6) {return 1;}
+    for (i = (reverse ? 7 : 0); (reverse ? i >= 0 : i <= 7); (reverse ? i-- : i++)) {
+        switch (i) {
+            case 0:
+                fm.x = p.x - 1;
+                fm.y = p.y - 1;
+                break;
+            case 1:
+                fm.x = p.x;
+                fm.y = p.y - 1;
+                break;
+            case 2:
+                fm.x = p.x + 1;
+                fm.y = p.y - 1;
+                break;
+            case 3:
+                fm.x = p.x + 1;
+                fm.y = p.y;
+                break;
+            case 4:
+                fm.x = p.x + 1;
+                fm.y = p.y + 1;
+                break;
+            case 5:
+                fm.x = p.x;
+                fm.y = p.y + 1;
+                break;
+            case 6:
+                fm.x = p.x - 1;
+                fm.y = p.y + 1;
+                break;
+            case 7:
+                fm.x = p.x - 1;
+                fm.y = p.y;
+                break;
+        }
 
-    return 0;
-
-    /* return ( */
-    /*         (p.x != 0 && matchFunc(map[p.y][p.x - 1])) */
-    /*      || (p.x != xMax - 1 && matchFunc(map[p.y][p.x + 1])) */
-    /*      || (p.y != 0 && matchFunc(map[p.y - 1][p.x])) */
-    /*      || (p.y != yMax - 1 && matchFunc(map[p.y + 1][p.x])) */
-    /*      || (p.y != 0 && p.x != 0 && matchFunc(map[p.y - 1][p.x - 1])) */
-    /*      || (p.y != 0 && p.x != xMax - 1 && matchFunc(map[p.y - 1][p.x + 1])) */
-    /*      || (p.y != yMax - 1 && p.x != 0 && matchFunc(map[p.y + 1][p.x - 1])) */
-    /*      || (p.y != yMax - 1 && p.x != xMax - 1 && matchFunc(map[p.y + 1][p.x + 1])) */
-    /*    ); */
+        if (fm.x < 0 || fm.y < 0 || fm.x > xMax - 1 || fm.y > yMax - 1) {
+           continue; 
+        }
+        if (isDigit(map[fm.y][fm.x])) {
+            return fm;
+        }
+    }
+    
+    fm.x = -1;
+    fm.y = -1;
+    return fm;
 }
 
 size_t isSymbol(char c) {
@@ -224,7 +180,7 @@ size_t isDigit(char c) {
 
 }
 
-int getWholeNumber(point p, char **map, point *points, size_t *pp) {
+int getWholeNumber(point p, char **map) {
 
     // Takes a single point that contains a digit
     // and finds the entire number that digit is part of
@@ -232,9 +188,6 @@ int getWholeNumber(point p, char **map, point *points, size_t *pp) {
     // Params:
     //  point p: Point at which to start search
     //  char **map: Map to search in
-    //  point *points: Points where we've found digits
-    //      This is to prevent these from being scanned
-    //      by future calls
     //  size_t *pp: current index of *points
     //
     // Returns:
@@ -242,33 +195,32 @@ int getWholeNumber(point p, char **map, point *points, size_t *pp) {
 
     char c;
     char numString[4];
-    point current;
     size_t nsp = 0;     // numString pointer
     size_t x = p.x;
     size_t y = p.y;
 
-    *pp = 0;
-
     // Check that there is a digit at p
-    if (!isdigit(map[y][x])) {
+    if (!isDigit(map[y][x])) {
         printf("ERROR: no digit at %zu, %zu\n", x, y);
         return -1;
     }
 
     // Seek to first digit in number
-    for (; isdigit(c = map[y][x]) || x == 0; x--) {
+    if (x == 0) {
         ;
     }
+    else {
+        for (; isDigit(c = map[y][x]); x--) {
+            ;
+        }
 
-    // Reset x back to first digit
-    x++;
+        // Reset x back to first digit
+        x++;
+    }
 
     // Write each digit into numString
-    for (; isdigit(c = map[y][x]); x++) {
+    for (; isDigit(c = map[y][x]); x++) {
         numString[nsp++] = c; 
-        current.x = x;
-        current.y = y;
-        points[*pp++] = current;
     }
 
     numString[nsp] = '\0';
@@ -277,37 +229,20 @@ int getWholeNumber(point p, char **map, point *points, size_t *pp) {
 
 }
 
-size_t getGearRatio(point p, char **map) {
-
-    // Calculates the gear ratio for p
-    // Gear ratio = product of numbers adjacent to p
-    // if p has exactly 2 adjacent numbers
-    //
-    // Params:
-    //  point p: Location of gear
-    //  char **map: Data to look in
-    //
-    // Returns:
-    //  product of adjacent numbers if there are
-    //  exactly two adjacent numbers
-    //  else 1
-
-    
-}
-
-
 int main(void) {
 
-    FILE *f = fopen("../../inputs/day3/sample.txt", "r");
-    size_t xi;          // x index for map array
-    size_t yi;          // y index for map array
-    char **map;         // Array to represent map
-    char* lineBuf;      // Buffer for map lines
-    size_t lSize;       // Length of lineBuf (x + 1)
-    size_t chars;       // Return value of getline
-    size_t nextNum;     // To store num values from map
-    point currentStart; // First digit of current number
-    point currentEnd;   // Last digit of current number
+    FILE *f = fopen("../../inputs/day3/input.txt", "r");
+    size_t xi;              // x index for map array
+    size_t yi;              // y index for map array
+    char **map;             // Array to represent map
+    char* lineBuf;          // Buffer for map lines
+    size_t lSize;           // Length of lineBuf (x + 1)
+    size_t chars;           // Return value of getline
+    point currentSym;       // Curent symbol being analyzed
+    point currentNum;       // Curent number being analyzed
+    point currentNum1;      // Storage for a stupid comparison later
+    size_t sForwardNum;     // Result of forward scan
+    size_t sBackwardNum;    // Result of backward scan
 
     getMapSize(&xMax, &yMax, f);
 
@@ -338,17 +273,37 @@ int main(void) {
     yi = 0;
     while (yi < yMax) {
         xi = 0;
-        
-        while ((xi = getNextNumInLine(map[yi], xi, &nextNum)) != -1) {
-            currentEnd.x = xi - 2;
-            currentEnd.y = yi;
-            currentStart.x = currentEnd.x - (digitLength(nextNum) - 1);
-            currentStart.y = yi;
-          
-            if (scanPoint(currentStart, map, 0,  &isSymbol) || scanPoint(currentEnd, map, 0, &isSymbol)) {
-                answer1 += nextNum; 
+
+        while ((xi = getNextSymbolInLine(map[yi], xi)) != -1) {
+            sForwardNum = 0;
+            sBackwardNum = 0;
+            currentSym.x = xi;
+            currentSym.y = yi;
+
+            // Scan around current symbol in both directions
+            if ((currentNum = scanPoint(currentSym, map, 0)).x != -1) {
+                sForwardNum = getWholeNumber(currentNum, map);
+                answer1 += sForwardNum;
+            }
+
+            // Check for second adjacent number
+            currentNum1 = currentNum;
+            if ((currentNum = scanPoint(currentSym, map, 1)).x != -1) {
+                sBackwardNum = getWholeNumber(currentNum, map);
+
+            }
+
+            // If number matches first scan, it's already been added
+            // ... Unless it's not, also check if y coord is different
+            // between the two they snuck a couple of those in there
+            if ((sBackwardNum == sForwardNum) && currentNum.y == currentNum1.y) {
+                xi++;
                 continue;
             }
+
+            answer1 += sBackwardNum;
+            xi++;
+
         }
 
         yi++;
@@ -359,22 +314,42 @@ int main(void) {
     yi = 0;
     while (yi < yMax) {
         xi = 0;
-        while ((xi = getNextGearInLine(map[yi], xi)) != -1) {
-            // Reusing this var to represent point of the gear
-            currentEnd.x = xi;
-            currentEnd.y = yi;
+        while ((xi = getNextSymbolInLine(map[yi], xi)) != -1) {
+            sForwardNum = 0;
+            sBackwardNum = 0;
+            currentSym.x = xi;
+            currentSym.y = yi;
 
-            if (scanPoint(currentEnd, map, 0, &isDigit)) {
-                printf("%zu, %zu\n", xi, yi);
+            if (map[yi][xi] != '*') {
+                xi++;
+                continue;
             }
+
+            if ((currentNum = scanPoint(currentSym, map, 0)).x != -1) {
+                sForwardNum = getWholeNumber(currentNum, map);
+            }
+
+            currentNum1 = currentNum;
+            if ((currentNum = scanPoint(currentSym, map, 1)).x != -1) {
+                sBackwardNum = getWholeNumber(currentNum, map);
+            }
+
+            if ((sBackwardNum == sForwardNum) && currentNum.y == currentNum1.y) {
+                xi++;
+                continue;
+            }
+
+            answer2 += (sBackwardNum * sForwardNum);
             xi++;
+
         }
         
         yi++;
-
+    
     }
-
+    
     printf("%zu\n", answer1);
+    printf("%zu\n", answer2);
 
     return EXIT_SUCCESS;
 }
